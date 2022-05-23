@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.views import LogoutView
 from .send_email import send_confirmation_email, send_reset_password
 from . import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
 # from account import serializers
 
 User = get_user_model()
@@ -60,4 +61,36 @@ class ResetPasswordView(APIView):
             return Response('Check your email')
             
 
+from rest_framework.generics import GenericAPIView  
+class LogoutApiView(GenericAPIView):
+    serializer_class = serializers.LogoutSerializer
+    permission_classes = (permissions.IsAuthenticated, )
+
+    def post(self, request, *args):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response('Successfully loged out!', status=status.HTTP_204_NO_CONTENT)
+
+
+class PasswordResetApiView(APIView):
+
+    def post(self, request):
+        serializer = serializers.PasswordResetApiSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            user = User.objects.get(email=serializer.data.get('email'))
+            user.is_active = False
+            user.create_activation_code()
+            user.save()
+            send_reset_password(user)
+            return Response('Check your email', status=200)
+        return Response({'msg': 'User with this email does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class NewPasswordApiView(APIView):
+    def post(self, request):
+        serializer = serializers.CreateNewPasswordSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response('You have successfully changed password!', status=200)
 
