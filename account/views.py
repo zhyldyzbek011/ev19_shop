@@ -8,6 +8,7 @@ from django.contrib.auth.views import LogoutView
 from .send_email import send_confirmation_email, send_reset_password
 from . import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.generics import GenericAPIView 
 # from account import serializers
 
 User = get_user_model()
@@ -48,7 +49,6 @@ class NewPasswordView(APIView):
             return Response('Password changed')
 
 class ResetPasswordView(APIView):
-
     def post(self, request):
         serializer = serializers.PasswordResetSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
@@ -59,18 +59,6 @@ class ResetPasswordView(APIView):
             user.save()
             send_reset_password(user)
             return Response('Check your email')
-            
-
-from rest_framework.generics import GenericAPIView  
-class LogoutApiView(GenericAPIView):
-    serializer_class = serializers.LogoutSerializer
-    permission_classes = (permissions.IsAuthenticated, )
-
-    def post(self, request, *args):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response('Successfully loged out!', status=status.HTTP_204_NO_CONTENT)
 
 
 class PasswordResetApiView(APIView):
@@ -94,3 +82,13 @@ class NewPasswordApiView(APIView):
             serializer.save()
             return Response('You have successfully changed password!', status=200)
 
+
+class LogoutApiView(GenericAPIView):
+    serializer_class = serializers.LogoutSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, *args):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response('Successfully loged out!', status=status.HTTP_204_NO_CONTENT)

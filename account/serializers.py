@@ -1,8 +1,11 @@
+from logging import raiseExceptions
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.utils.text import gettext_lazy as _
+
+
 User = get_user_model()
 
 
@@ -31,8 +34,8 @@ class LoginSerializer(TokenObtainPairSerializer):
     password = serializers.CharField(min_length=6, write_only=True)
 
     def validate(self, attrs):
-        email = attrs.get('email')
-        password = attrs.get('password')
+        email = attrs.pop('email')
+        password = attrs.pop('password')
         if not User.objects.filter(email=email).exists():
             raise serializers.ValidationError('User not found')
         user = authenticate(username=email, password=password)
@@ -40,9 +43,11 @@ class LoginSerializer(TokenObtainPairSerializer):
             refresh = self.get_token(user)
             attrs['refresh'] = str(refresh)
             attrs['access'] = str(refresh.access_token)
+        else:
+            raise serializers.ValidationError('Invalid password!')
         return attrs
 
-      
+
 class CreateNewPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=30, required=True)
     code = serializers.CharField(max_length=100, required=True)
@@ -89,9 +94,8 @@ class PasswordResetSerializer(serializers.Serializer):
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
-
     default_error_messages = {
-        'bad_token': _('Token is invalid or expired')
+        'bad_token': _('Token is invalid or expired!')
     }
 
     def validate(self, attrs):
