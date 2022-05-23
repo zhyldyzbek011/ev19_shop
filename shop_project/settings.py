@@ -32,10 +32,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_auth',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
 
     # my_apps
     'account',
     'product',
+    'basket',
 ]
 
 MIDDLEWARE = [

@@ -1,10 +1,11 @@
+import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
 from django.contrib.auth.views import LogoutView
-from .send_email import send_confirmation_email
+from .send_email import send_confirmation_email, send_reset_password
 from . import serializers
 # from account import serializers
 
@@ -35,8 +36,28 @@ class ActivationView(APIView):
 
 
 class LoginApiView(TokenObtainPairView):
-    serializer = serializers.LoginSerializer
+    serializer_class = serializers.LoginSerializer
 
 
-class LogoutApiView(LogoutView):
-    permission_classes = (permissions.IsAuthenticated,)
+class NewPasswordView(APIView):
+    def post(self, request):
+        serializer = serializers.CreateNewPasswordSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response('Password changed')
+
+class ResetPasswordView(APIView):
+
+    def post(self, request):
+        serializer = serializers.PasswordResetSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            user = User.objects.get(
+                email=serializer.data.get('email')
+            )
+            user.create_activation_code()
+            user.save()
+            send_reset_password(user)
+            return Response('Check your email')
+            
+
+
