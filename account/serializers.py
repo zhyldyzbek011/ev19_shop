@@ -42,6 +42,50 @@ class LoginSerializer(TokenObtainPairSerializer):
             attrs['access'] = str(refresh.access_token)
         return attrs
 
+      
+class CreateNewPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=30, required=True)
+    code = serializers.CharField(max_length=100, required=True)
+    password = serializers.CharField(min_length=4, required=True)
+    password2 = serializers.CharField(min_length=4, required=True)
+
+    def validate(self, attrs):
+        password = attrs['password']
+        password2 = attrs.pop('password2')
+        if password != password2:
+            raise serializers.ValidationError('Passwords does not match')
+        
+        email = attrs['email']
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError('User with this email does not exists')
+        
+        code = attrs['code']
+        if user.activation_code != code:
+            raise serializers.ValidationError('Code is incorrect')
+        
+        attrs['user'] = user
+
+        return attrs
+    
+    def save(self, **kwargs):
+        data = self.validated_data
+        user = data['user']
+
+        user.set_password(data['password'])
+        user.activation_code = ''
+        user.save()
+
+        return user
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+        max_length=25,
+        required=True
+    )
+
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
@@ -59,46 +103,3 @@ class LogoutSerializer(serializers.Serializer):
             RefreshToken(self.token).blacklist()
         except TokenError:
             self.fail('bad_token')
-
-
-class PasswordResetApiSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-
-
-class CreateNewPasswordSerializer(serializers.Serializer):
-    email = serializers.EmailField(max_length=25, required=True)
-    code = serializers.CharField(max_length=250, required=True)
-    password = serializers.CharField(min_length=6, required=True)
-    password2 = serializers.CharField(min_length=6, required=True)
-
-    def validate_email(self, email):
-        if not User.objects.filter(email=email).exists():
-            raise serializers.ValidationError('User with this email does not exist')
-        return email
-
-    def validate(self, attrs):
-        password = attrs.get('password')
-        password2 = attrs.get('password2')
-        if password != password2:
-            raise serializers.ValidationError('Passwords do not match')
-        return attrs
-
-    def validate_code(self, code):
-        if not User.objects.filter(activation_code=code).exists():
-            raise serializers.ValidationError('Activation code is not correct')
-        return code
-
-    def save(self, **kwargs):
-        data = self.validated_data
-        email = data.get('email')
-        code = data.get('code')
-        password = data.get('password')
-        try:
-            user = User.objects.get(email=email, activation_code=code)
-        except User.DoesNotExist:
-            raise serializers.ValidationError('User does not exist or code is not correct')
-        user.activation_code = ''
-        user.is_active = True
-        user.set_password(password)
-        user.save()
-        return user

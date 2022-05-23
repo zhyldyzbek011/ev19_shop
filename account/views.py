@@ -1,3 +1,4 @@
+import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -36,8 +37,29 @@ class ActivationView(APIView):
 
 
 class LoginApiView(TokenObtainPairView):
-    serializer = serializers.LoginSerializer
+    serializer_class = serializers.LoginSerializer
 
+
+class NewPasswordView(APIView):
+    def post(self, request):
+        serializer = serializers.CreateNewPasswordSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response('Password changed')
+
+class ResetPasswordView(APIView):
+
+    def post(self, request):
+        serializer = serializers.PasswordResetSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            user = User.objects.get(
+                email=serializer.data.get('email')
+            )
+            user.create_activation_code()
+            user.save()
+            send_reset_password(user)
+            return Response('Check your email')
+            
 
 from rest_framework.generics import GenericAPIView  
 class LogoutApiView(GenericAPIView):
@@ -71,3 +93,4 @@ class NewPasswordApiView(APIView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response('You have successfully changed password!', status=200)
+
