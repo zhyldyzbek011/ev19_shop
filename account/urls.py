@@ -10,4 +10,6 @@ urlpatterns = [
     path('login/', views.LoginApiView.as_view()),
     path('logout/', views.LogoutApiView.as_view()),
     path('refresh/', TokenRefreshView.as_view()),
+    path('password_reset/', views.PasswordResetApiView.as_view()),
+    path('change_password/', views.NewPasswordApiView.as_view()),
 ]
